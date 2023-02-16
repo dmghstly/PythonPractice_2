@@ -14,6 +14,7 @@ import aiofiles.os
 from clients.country import CountryClient
 from clients.currency import CurrencyClient
 from clients.weather import WeatherClient
+from clients.news import NewsClient
 from collectors.base import BaseCollector
 from collectors.models import (
     LocationDTO,
@@ -21,12 +22,14 @@ from collectors.models import (
     CurrencyRatesDTO,
     CurrencyInfoDTO,
     WeatherInfoDTO,
+    NewsInfoDTO,
 )
 from settings import (
     MEDIA_PATH,
     CACHE_TTL_COUNTRY,
     CACHE_TTL_CURRENCY_RATES,
     CACHE_TTL_WEATHER,
+    CACHE_TTL_NEWS,
 )
 
 
@@ -88,9 +91,15 @@ class CountryCollector(BaseCollector):
             items = json.loads(content)
             result_list = []
             for item in items:
+                if item["area"] == None:
+                    area = 0.0
+                else:
+                    area = item["area"]
                 result_list.append(
                     CountryDTO(
                         capital=item["capital"],
+                        timezone="",
+                        current_time="",
                         alpha2code=item["alpha2code"],
                         alt_spellings=item["alt_spellings"],
                         currencies={
@@ -101,8 +110,11 @@ class CountryCollector(BaseCollector):
                         languages=item["languages"],
                         name=item["name"],
                         population=item["population"],
+                        area=area,
                         subregion=item["subregion"],
                         timezones=item["timezones"],
+                        latitude=item["latitude"],
+                        longitude=item["longitude"],
                     )
                 )
 
@@ -219,10 +231,73 @@ class WeatherCollector(BaseCollector):
                 humidity=result["main"]["humidity"],
                 wind_speed=result["wind"]["speed"],
                 description=result["weather"][0]["description"],
+                visibility=result["visibility"],
             )
 
         return None
 
+
+class NewsCollector(BaseCollector):
+    """
+    Сбор информации о новостях из стран.
+    """
+
+    def __init__(self) -> None:
+        self.client = NewsClient()
+
+    @staticmethod
+    async def get_file_path(filename: str = "", **kwargs: Any) -> str:
+        return f"{MEDIA_PATH}/news/{filename}.json"
+
+    @staticmethod
+    async def get_cache_ttl() -> int:
+        return CACHE_TTL_NEWS
+
+    async def collect(
+        self, locations: FrozenSet[LocationDTO] = frozenset(), **kwargs: Any
+    ) -> None:
+
+        target_dir_path = f"{MEDIA_PATH}/news"
+        # если целевой директории еще не существует, то она создается
+        if not await aiofiles.os.path.exists(target_dir_path):
+            await aiofiles.os.mkdir(target_dir_path)
+
+        for location in locations:
+            filename = f"{location.alpha2code}_news".lower()
+            if await self.cache_invalid(filename=filename):
+                # если кэш уже невалиден, то актуализируем его
+                result = await self.client.get_news(
+                    f"{location.alpha2code}"
+                )
+                if result:
+                    result_str = json.dumps(result)
+                    async with aiofiles.open(
+                        await self.get_file_path(filename), mode="w"
+                    ) as file:
+                        await file.write(result_str)
+
+    @classmethod
+    async def read(cls, location: LocationDTO) -> Optional[NewsInfoDTO]:
+        """
+        Чтение данных из кэша.
+
+        :param location:
+        :return:
+        """
+
+        filename = f"{location.alpha2code}_news".lower()
+        async with aiofiles.open(await cls.get_file_path(filename), mode="r") as file:
+            content = await file.read()
+
+        result = json.loads(content)
+        if result:
+            return NewsInfoDTO(
+                article1=result["articles"][0]["title"],
+                article2=result["articles"][1]["title"],
+                article3=result["articles"][2]["title"],
+            )
+
+        return None
 
 class Collectors:
     @staticmethod
@@ -238,6 +313,7 @@ class Collectors:
         try:
             results = loop.run_until_complete(Collectors.gather())
             loop.run_until_complete(WeatherCollector().collect(results[1]))
+            loop.run_until_complete(NewsCollector().collect(results[1]))
             loop.run_until_complete(loop.shutdown_asyncgens())
 
         finally:

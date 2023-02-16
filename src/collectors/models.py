@@ -68,6 +68,8 @@ class CountryDTO(BaseModel):
 
         CountryDTO(
             capital="Mariehamn",
+            timezone="Country/City" | "Etc/GMT-3",
+            time="HH:mm:ss",
             alpha2code="AX",
             alt_spellings=[
               "AX",
@@ -89,14 +91,19 @@ class CountryDTO(BaseModel):
             },
             name="\u00c5land Islands",
             population=28875,
+            area=1580.0,
             subregion="Northern Europe",
             timezones=[
                 "UTC+02:00",
             ],
+            latitude=60.116667,
+            longitude=19.9,
         )
     """
 
     capital: str
+    timezone: str
+    current_time: str
     alpha2code: str
     alt_spellings: list[str]
     currencies: set[CurrencyInfoDTO]
@@ -106,6 +113,9 @@ class CountryDTO(BaseModel):
     population: int
     subregion: str
     timezones: list[str]
+    area: float
+    latitude: float
+    longitude: float
 
 
 class CurrencyRatesDTO(BaseModel):
@@ -140,6 +150,7 @@ class WeatherInfoDTO(BaseModel):
             humidity=54,
             wind_speed=4.63,
             description="scattered clouds",
+            visisbility=10000,
         )
     """
 
@@ -148,6 +159,25 @@ class WeatherInfoDTO(BaseModel):
     humidity: int
     wind_speed: float
     description: str
+    visibility: int
+
+
+class NewsInfoDTO(BaseModel):
+    """
+    Модель данных о новостях (3 первые топовые новости и их названия).
+
+    .. code-block::
+
+        NewsInfoDTO(
+            article1="Some name",
+            article2="Some name",
+            article3="Some name",
+        )
+    """
+
+    article1: str
+    article2: str
+    article3: str
 
 
 class LocationInfoDTO(BaseModel):
@@ -192,6 +222,11 @@ class LocationInfoDTO(BaseModel):
                 wind_speed=4.63,
                 description="scattered clouds",
             ),
+            news=NewsInfoDTO(
+                article1="Some name",
+                article2="Some name",
+                article3="Some name",
+            )
             currency_rates={
                 "EUR": 0.016503,
             },
@@ -200,4 +235,5 @@ class LocationInfoDTO(BaseModel):
 
     location: CountryDTO
     weather: WeatherInfoDTO
+    news: NewsInfoDTO
     currency_rates: dict[str, float]
