@@ -31,7 +31,7 @@ class CurrencyClient(BaseClient):
 
                 return None
 
-    async def get_rates(self, base: str = "rub") -> Optional[dict]:
+    async def get_rates(self, base: str = "RUB") -> Optional[dict]:
         """
          Получение данных о курсах валют.
 

@@ -21,22 +21,48 @@ class Renderer:
 
         self.location_info = location_info
 
-    async def render(self) -> tuple[str, ...]:
+    async def render(self) -> list:
         """
         Форматирование прочитанных данных.
 
         :return: Результат форматирования
         """
 
-        return (
-            f"Страна: {self.location_info.location.name}",
-            f"Столица: {self.location_info.location.capital}",
-            f"Регион: {self.location_info.location.subregion}",
-            f"Языки: {await self._format_languages()}",
-            f"Население страны: {await self._format_population()} чел.",
-            f"Курсы валют: {await self._format_currency_rates()}",
-            f"Погода: {self.location_info.weather.temp} °C",
-        )
+        result = [[f"Информация о стране"],
+                  [f"Страна: {self.location_info.location.name}"],
+                  [f"Площадь страны: {await self._format_area()} км. кв."],
+                  [f"Столица: {self.location_info.location.capital}"],
+                  [f"Временная зона столицы: {self.location_info.location.timezone}"],
+                  [f"Текущее время в столице: {self.location_info.location.current_time}"],
+                  [f"Координааты столицы: {self.location_info.location.longitude} д. {self.location_info.location.latitude} ш."],
+                  [f"Регион: {self.location_info.location.subregion}"],
+                  [f"Языки: {await self._format_languages()}"],
+                  [f"Население страны: {await self._format_population()} чел."],
+                  [f"Курсы валют: {await self._format_currency_rates()}"],
+                  [f"Информация о погоде"],
+                  [f"Погода: {self.location_info.weather.temp} °C"],
+                  [f"Описание погоды: {self.location_info.weather.description}"],
+                  [f"Видимость: {self.location_info.weather.visibility} м."],
+                  [f"Скорость ветра: {self.location_info.weather.wind_speed} м/с"],
+                  [f"Топ 3 новости за последнее время из {self.location_info.location.name}"],
+                  [f"1. {self.location_info.news.article1}"],
+                  [f"2. {self.location_info.news.article2}"],
+                  [f"3. {self.location_info.news.article3}"],
+        ]
+
+        return result
+
+    async def _format_area(self) -> str:
+        """
+        Форматирование информации о площади страны.
+
+        :return:
+        """
+
+        if (self.location_info.location.area == 0.0):
+            return "Нет данных"
+        else:
+            return int(self.location_info.location.area)
 
     async def _format_languages(self) -> str:
         """
